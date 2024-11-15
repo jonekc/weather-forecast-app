@@ -1,5 +1,5 @@
 <script setup lang="ts">
-type ListViewProps = {
+export type ListViewProps = {
   data: { label: string; value: string }[]
 }
 

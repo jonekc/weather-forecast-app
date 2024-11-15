@@ -2,7 +2,7 @@
 import { ref, onMounted, watch, onUnmounted } from 'vue'
 import * as echarts from 'echarts'
 
-type ChartProps = {
+export type ChartProps = {
   labels: string[]
   data: number[]
   axisName: string
@@ -69,16 +69,10 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="wrapper">
-    <div ref="chartRef" class="line-chart"></div>
-  </div>
+  <div ref="chartRef" class="line-chart"></div>
 </template>
 
 <style scoped>
-.wrapper {
-  width: 100%;
-}
-
 .line-chart {
   width: 100%;
   height: 400px;

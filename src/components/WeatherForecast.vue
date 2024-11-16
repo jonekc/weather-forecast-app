@@ -5,6 +5,7 @@ import { computed, ref } from 'vue'
 import LineChart from './LineChart.vue'
 import dayjs from 'dayjs'
 import ListView from './ListView.vue'
+import { configuration } from '@/utils/configuration'
 
 const town = ref('')
 const hourlyWeather = ref<HourlyWeather | null>(null)
@@ -13,8 +14,6 @@ const isError = ref(false)
 const noResults = ref(false)
 
 const searchForecast = async () => {
-  const geocodingAPIBaseURL = 'https://geocoding-api.open-meteo.com'
-  const forecastAPIBaseURL = 'https://api.open-meteo.com'
   const hourly = 'temperature_2m'
   const timezone = 'auto'
 
@@ -24,7 +23,7 @@ const searchForecast = async () => {
     noResults.value = false
 
     const { data: searchData } = await axios.get<{ results?: Town[] }>(
-      `${geocodingAPIBaseURL}/v1/search`,
+      `${configuration.geocodingAPIBaseURL}/v1/search`,
       {
         params: { name: town.value, count: 1 },
       },
@@ -35,7 +34,7 @@ const searchForecast = async () => {
       const longitude = results[0].longitude
 
       const { data: forecastData } = await axios.get<ForecastResponse>(
-        `${forecastAPIBaseURL}/v1/forecast`,
+        `${configuration.forecastAPIBaseURL}/v1/forecast`,
         {
           params: { latitude, longitude, hourly, timezone },
         },
@@ -80,18 +79,19 @@ const forecastListData = computed(() =>
         autofocus
         class="town-input"
     /></label>
-    <input type="submit" value="Search" class="search-button" />
+    <input type="submit" value="Search" class="search-button" :disabled="isLoading" />
     <p v-if="isLoading" class="message">Loading...</p>
-    <LineChart
-      v-else-if="hourlyWeather && !isError"
-      :data="hourlyWeather.temperature_2m"
-      :labels="hourlyWeather.time"
-      axis-name="Temperature °C"
-      :formatter="labelFormatter"
-    />
+    <template v-else-if="hourlyWeather && forecastListData && !isError">
+      <LineChart
+        :data="hourlyWeather.temperature_2m"
+        :labels="hourlyWeather.time"
+        axis-name="Temperature °C"
+        :formatter="labelFormatter"
+      />
+      <ListView :data="forecastListData" />
+    </template>
     <p v-if="isError" class="message">An error occurred. Try again later.</p>
     <p v-if="noResults" class="message">No results found. Try a different location</p>
-    <ListView v-else-if="forecastListData && !isError" :data="forecastListData" />
   </form>
 </template>
 

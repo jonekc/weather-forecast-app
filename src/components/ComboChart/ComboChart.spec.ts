@@ -1,7 +1,13 @@
 import { mount } from '@vue/test-utils'
 import { describe, it, expect, vi, afterEach, type Mock } from 'vitest'
-import LineChart, { type ChartProps } from './LineChart.vue'
+import ComboChart, { type ComboChartProps } from './ComboChart.vue'
 import * as echarts from 'echarts'
+
+const props: ComboChartProps = {
+  labels: ['Nov 15', 'Nov 16'],
+  yAxis: { type: 'value', name: 'Temperature °C' },
+  series: { type: 'line', smooth: true, data: [5, 7] },
+}
 
 describe('Test a line chart', () => {
   afterEach(() => {
@@ -18,13 +24,7 @@ describe('Test a line chart', () => {
       dispose: mockDispose,
     })
 
-    const props: ChartProps = {
-      labels: ['Nov 15', 'Nov 16'],
-      data: [5, 7],
-      axisName: 'Temperature',
-      formatter: (value) => `${value}°C`,
-    }
-    const wrapper = mount(LineChart, { props })
+    const wrapper = mount(ComboChart, { props })
 
     expect(mock).toBeCalledWith(wrapper.element)
 
@@ -34,17 +34,8 @@ describe('Test a line chart', () => {
         data: props.labels,
         axisLabel: { formatter: props.formatter },
       },
-      yAxis: {
-        type: 'value',
-        name: props.axisName,
-      },
-      series: [
-        {
-          data: props.data,
-          type: 'line',
-          smooth: true,
-        },
-      ],
+      yAxis: props.yAxis,
+      series: props.series,
     }
     expect(mockSetOption).toHaveBeenCalledWith(expect.objectContaining(option))
   })
@@ -56,13 +47,7 @@ describe('Test a line chart', () => {
       dispose: mockDispose,
     })
 
-    const props: ChartProps = {
-      labels: ['Nov 15', 'Nov 16'],
-      data: [5, 7],
-      axisName: 'Temperature',
-      formatter: (value) => `${value}°C`,
-    }
-    const wrapper = mount(LineChart, { props })
+    const wrapper = mount(ComboChart, { props })
 
     wrapper.unmount()
     expect(mockDispose).toHaveBeenCalled()

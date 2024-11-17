@@ -2,10 +2,12 @@
 import type { ForecastResponse, HourlyWeather, Town } from '@/types/weatherForecast'
 import axios from 'axios'
 import { computed, ref } from 'vue'
-import LineChart from './LineChart.vue'
+import ComboChart, { type ComboChartProps } from './ComboChart/ComboChart.vue'
 import dayjs from 'dayjs'
-import ListView from './ListView.vue'
+import ListView, { type ListItem } from './ListView/ListView.vue'
 import { configuration } from '@/utils/configuration'
+import type { TopLevelFormatterParams } from 'echarts/types/dist/shared'
+import SpinnerComponent from './SpinnerComponent.vue'
 
 const town = ref('')
 const hourlyWeather = ref<HourlyWeather | null>(null)
@@ -14,7 +16,7 @@ const isError = ref(false)
 const noResults = ref(false)
 
 const searchForecast = async () => {
-  const hourly = 'temperature_2m'
+  const hourly = 'temperature_2m,precipitation'
   const timezone = 'auto'
 
   try {
@@ -54,16 +56,44 @@ const searchForecast = async () => {
 }
 
 const labelFormatter = (value: string) => dayjs(value).format('MMM D, HH:mm')
-const forecastListData = computed(() =>
+const tooltipFormatter = (params: TopLevelFormatterParams) => {
+  const data = [...(Array.isArray(params) ? params : [params])]
+  const precipitation = data[0]
+  const temperature = data[1]
+  return `${labelFormatter(temperature.name)}: ${temperature.data}°C, ${precipitation.data}mm`
+}
+
+const forecastListData = computed<Record<string, ListItem[]> | null>(() =>
   hourlyWeather.value
-    ? hourlyWeather.value.time.map((time, index) => {
-        const temperature = hourlyWeather.value?.temperature_2m[index]
-        const formattedTime = labelFormatter(time)
-        return {
-          label: `${formattedTime}:`,
-          value: temperature !== undefined ? `${temperature}°C` : '',
-        }
-      })
+    ? hourlyWeather.value.time.reduce(
+        (acc, time, index) => {
+          const temperature = hourlyWeather.value?.temperature_2m[index]
+          const precipitation = hourlyWeather.value?.precipitation[index]
+          const formattedTime = labelFormatter(time)
+
+          const date = dayjs(time).format('MMM D')
+          const label = `${formattedTime}:`
+          const value = temperature !== undefined ? `${temperature}°C, ${precipitation}mm` : ''
+          const currentList = acc[date] || []
+
+          return { ...acc, [date]: [...currentList, { label, value }] }
+        },
+        {} as Record<string, ListItem[]>,
+      )
+    : null,
+)
+const forecastChartData = computed<Pick<ComboChartProps, 'yAxis' | 'series'> | null>(() =>
+  hourlyWeather.value
+    ? {
+        yAxis: [
+          { type: 'value', name: 'Precipitation mm', position: 'right' },
+          { type: 'value', name: 'Temperature °C' },
+        ],
+        series: [
+          { type: 'bar', data: hourlyWeather.value?.precipitation, yAxisIndex: 0 },
+          { type: 'line', smooth: true, data: hourlyWeather.value.temperature_2m, yAxisIndex: 1 },
+        ],
+      }
     : null,
 )
 </script>
@@ -80,23 +110,29 @@ const forecastListData = computed(() =>
         class="town-input"
     /></label>
     <input type="submit" value="Search" class="search-button" :disabled="isLoading" />
-    <p v-if="isLoading" class="message">Loading...</p>
-    <template v-else-if="hourlyWeather && forecastListData && !isError">
-      <LineChart
-        :data="hourlyWeather.temperature_2m"
-        :labels="hourlyWeather.time"
-        axis-name="Temperature °C"
-        :formatter="labelFormatter"
-      />
-      <ListView :data="forecastListData" />
-    </template>
-    <p v-if="isError" class="message">An error occurred. Try again later.</p>
-    <p v-if="noResults" class="message">No results found. Try a different location</p>
   </form>
+  <div v-if="isLoading" class="message">
+    <SpinnerComponent width="100%" height="400px" />
+  </div>
+  <template v-else-if="hourlyWeather && forecastChartData && forecastListData && !isError">
+    <ComboChart
+      :y-axis="forecastChartData.yAxis"
+      :series="forecastChartData.series"
+      :labels="hourlyWeather.time"
+      :formatter="labelFormatter"
+      :tooltip-formatter="tooltipFormatter"
+    />
+    <div class="list">
+      <ListView v-for="(item, key) in forecastListData" :key="key" :data="item" />
+    </div>
+  </template>
+  <p v-if="isError" class="message">An error occurred. Try again later.</p>
+  <p v-if="noResults" class="message">No results found. Try a different location</p>
 </template>
 
 <style scoped>
 .heading {
+  font-weight: 500;
   margin-bottom: 0.7rem;
 }
 
@@ -107,8 +143,13 @@ const forecastListData = computed(() =>
 }
 
 .search-button {
-  height: 2rem;
+  height: 2.05rem;
   padding: 0.5rem;
+}
+
+.list {
+  display: grid;
+  row-gap: 2rem;
 }
 
 .message {

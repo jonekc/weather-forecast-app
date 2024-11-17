@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest'
-import ListView, { type ListViewProps } from './ListView.vue'
+import ListView, { type ListViewProps } from '../ListView/ListView.vue'
 import { mount } from '@vue/test-utils'
 
 it('Hourly weather is displayed in a list', () => {

@@ -8,6 +8,7 @@ type Town = {
 type HourlyWeather = {
   time: string[]
   temperature_2m: number[] // Array of temperatures in °C
+  precipitation: number[] // Array of precipitation in mm
 }
 
 type ForecastResponse = {

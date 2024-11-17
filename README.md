@@ -13,3 +13,7 @@ npm install
 ```sh
 npm run dev
 ```
+
+## Environment variables
+
+Create an `.env` file based on an `.env.example` file if you want to change the default values defined in a `src/utils/configuration.ts` file.

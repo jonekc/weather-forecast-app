@@ -5,6 +5,10 @@ type Town = {
   longitude: number
 }
 
+type TownResponse = {
+  results?: Town[]
+}
+
 type HourlyWeather = {
   time: string[]
   temperature_2m: number[] // Array of temperatures in °C
@@ -22,6 +26,7 @@ type ForecastResponse = {
   hourly_units: {
     time: string
     temperature_2m: string
+    precipitation: string
   }
   hourly: HourlyWeather
 }
@@ -31,4 +36,4 @@ type ChartData = {
   data: number[]
 }
 
-export type { Town, HourlyWeather, ForecastResponse, ChartData }
+export type { Town, TownResponse, HourlyWeather, ForecastResponse, ChartData }

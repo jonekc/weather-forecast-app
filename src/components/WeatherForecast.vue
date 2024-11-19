@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ForecastResponse, HourlyWeather, Town } from '@/types/weatherForecast'
+import type { ForecastResponse, HourlyWeather, TownResponse } from '@/types/weatherForecast'
 import axios from 'axios'
 import { computed, ref } from 'vue'
 import ComboChart, { type ComboChartProps } from './ComboChart/ComboChart.vue'
@@ -24,7 +24,7 @@ const searchForecast = async () => {
     isError.value = false
     noResults.value = false
 
-    const { data: searchData } = await axios.get<{ results?: Town[] }>(
+    const { data: searchData } = await axios.get<TownResponse>(
       `${configuration.geocodingAPIBaseURL}/v1/search`,
       {
         params: { name: town.value, count: 1 },
@@ -111,7 +111,7 @@ const forecastChartData = computed<Pick<ComboChartProps, 'yAxis' | 'series'> | n
     /></label>
     <input type="submit" value="Search" class="search-button" :disabled="isLoading" />
   </form>
-  <div v-if="isLoading" class="message">
+  <div v-if="isLoading" class="message" data-testid="spinner">
     <SpinnerComponent width="100%" height="400px" />
   </div>
   <template v-else-if="hourlyWeather && forecastChartData && forecastListData && !isError">

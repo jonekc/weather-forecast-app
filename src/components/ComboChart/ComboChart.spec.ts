@@ -9,7 +9,7 @@ const props: ComboChartProps = {
   series: { type: 'line', smooth: true, data: [5, 7] },
 }
 
-describe('Test a line chart', () => {
+describe('Test a combo chart', () => {
   afterEach(() => {
     vi.restoreAllMocks()
   })

@@ -1,0 +1,11 @@
+services:
+  weather-forecast-app-prod:
+    image: weather-forecast-app-prod
+    build:
+      context: ./
+      target: prod
+      args:
+        - VITE_GEOCODING_API_BASE_URL=${VITE_GEOCODING_API_BASE_URL}
+        - VITE_FORECAST_API_BASE_URL=${VITE_FORECAST_API_BASE_URL}
+    ports:
+      - '8080:80'

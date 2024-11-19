@@ -21,10 +21,10 @@ docker-compose up
 - Production version:
 
 ```sh
-docker-compose -f docker-compose-prod.yml build
-docker-compose -f docker-compose-prod.yml up
+docker-compose -f docker-compose-prod.yml --env-file .env.production build
+docker-compose -f docker-compose-prod.yml --env-file .env.production up
 ```
 
 ## Environment variables
 
-Create an `.env.local`/`.env.production` file based on an `.env.example` file if you want to change the default values defined in a `src/utils/configuration.ts` file.
+Create an `.env`/`.env.production` file based on an `.env.example` file if you want to change the default values defined in a `src/utils/configuration.ts` file.

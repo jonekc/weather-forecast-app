@@ -1,0 +1,10 @@
+version: '3'
+
+services:
+  weather-forecast-app-prod:
+    image: weather-forecast-app-prod
+    build:
+      context: ./
+      target: prod
+    ports:
+      - '8080:80'

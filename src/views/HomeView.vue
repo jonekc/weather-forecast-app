@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import WeatherForecast from '../components/WeatherForecast.vue'
+import WeatherForecast from '@/components/WeatherForecast/WeatherForecast.vue'
 </script>
 
 <template>

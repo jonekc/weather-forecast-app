@@ -1,19 +1,69 @@
 <script setup lang="ts">
-import type { ForecastResponse, HourlyWeather, TownResponse } from '@/types/weatherForecast'
+import type { ForecastResponse, HourlyWeather, Town, TownResponse } from '@/types/weatherForecast'
 import axios from 'axios'
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import ComboChart, { type ComboChartProps } from '../ComboChart/ComboChart.vue'
 import dayjs from 'dayjs'
 import ListView, { type ListItem } from '../ListView/ListView.vue'
 import { configuration } from '@/utils/configuration'
 import type { TopLevelFormatterParams } from 'echarts/types/dist/shared'
 import SpinnerComponent from '../SpinnerComponent.vue'
+import type { AutoComplete, AutoCompleteCompleteEvent } from 'primevue'
 
-const town = ref('')
+const town = ref<Town | string>('')
+const suggestions = ref<Town[]>([])
+const selectedTownLabel = ref('')
+
 const hourlyWeather = ref<HourlyWeather | null>(null)
 const isLoading = ref(false)
 const isError = ref(false)
 const noResults = ref(false)
+
+const selectElement = ref<InstanceType<typeof AutoComplete> | null>(null)
+
+onMounted(() => {
+  const element = (selectElement.value as { $el?: HTMLInputElement | null })?.$el
+  if (element) {
+    element.querySelector('input')?.focus()
+  }
+})
+
+const fetchSuggestions = async (count?: number) => {
+  const name = typeof town.value === 'string' ? town.value : town.value.name
+  const {
+    data: { results },
+  } = await axios.get<TownResponse>(`${configuration.geocodingAPIBaseURL}/v1/search`, {
+    params: { name, count },
+  })
+  suggestions.value = results || []
+  return results
+}
+
+const handleSelectComplete = (e: AutoCompleteCompleteEvent) => {
+  if (e.query.length >= 2) {
+    try {
+      fetchSuggestions()
+    } catch (e) {
+      console.log(e)
+      suggestions.value = []
+    }
+  } else {
+    suggestions.value = []
+  }
+}
+
+const handleEnterPress = () => {
+  if (typeof town.value === 'string' && town.value.length >= 2) {
+    ;(selectElement.value as { hide?: () => void }).hide?.()
+    searchForecast()
+  }
+}
+
+const getAdmininistrativeAreas = (suggestion: Town) =>
+  `${suggestion.admin1 ? `, ${suggestion.admin1}` : ''}${suggestion.admin2 ? `, ${suggestion.admin2}` : ''}${suggestion.admin3 ? `, ${suggestion.admin3}` : ''}${suggestion.admin4 ? `, ${suggestion.admin4}` : ''}${suggestion.country ? `, ${suggestion.country}` : ''}`
+
+const formatSuggestion = (suggestion: Town) =>
+  `${suggestion.name}${getAdmininistrativeAreas(suggestion)}`
 
 const searchForecast = async () => {
   const hourly = 'temperature_2m,precipitation'
@@ -24,14 +74,12 @@ const searchForecast = async () => {
     isError.value = false
     noResults.value = false
 
-    const { data: searchData } = await axios.get<TownResponse>(
-      `${configuration.geocodingAPIBaseURL}/v1/search`,
-      {
-        params: { name: town.value, count: 1 },
-      },
-    )
-    const { results } = searchData
-    if (results) {
+    let results: Town[] | undefined = typeof town.value === 'string' ? [] : [town.value]
+    if (!results.length) {
+      results = await fetchSuggestions(1)
+    }
+    if (results?.length) {
+      selectedTownLabel.value = formatSuggestion(results[0])
       const latitude = results[0].latitude
       const longitude = results[0].longitude
 
@@ -52,6 +100,7 @@ const searchForecast = async () => {
     hourlyWeather.value = null
   } finally {
     isLoading.value = false
+    town.value = ''
   }
 }
 
@@ -101,20 +150,26 @@ const forecastChartData = computed<Pick<ComboChartProps, 'yAxis' | 'series'> | n
 <template>
   <h3 class="heading">Weather forecast</h3>
   <form @submit="searchForecast" @submit.prevent>
-    <label
-      >Enter a town<br /><input
+    <label>
+      Enter a town<br />
+      <AutoComplete
         v-model="town"
-        @keyup.enter="searchForecast"
-        required
-        autofocus
-        class="town-input"
-    /></label>
+        @keyup.enter="handleEnterPress"
+        :suggestions="suggestions"
+        :option-label="formatSuggestion"
+        :min-length="2"
+        @complete="handleSelectComplete"
+        @option-select="searchForecast"
+        ref="selectElement"
+      />
+    </label>
     <input type="submit" value="Search" class="search-button" :disabled="isLoading" />
   </form>
   <div v-if="isLoading" class="message" data-testid="spinner">
     <SpinnerComponent width="100%" height="400px" />
   </div>
   <template v-else-if="hourlyWeather && forecastChartData && forecastListData && !isError">
+    <p class="town-label">{{ selectedTownLabel }}</p>
     <ComboChart
       :y-axis="forecastChartData.yAxis"
       :series="forecastChartData.series"
@@ -143,8 +198,13 @@ const forecastChartData = computed<Pick<ComboChartProps, 'yAxis' | 'series'> | n
 }
 
 .search-button {
-  height: 2.05rem;
+  height: 2rem;
   padding: 0.5rem;
+  margin-left: 0.5rem;
+}
+
+.town-label {
+  margin-top: 1rem;
 }
 
 .list {
